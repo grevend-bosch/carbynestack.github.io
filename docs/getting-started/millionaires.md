@@ -10,10 +10,6 @@ Please see the [Platform Setup Guide](../platform-setup) and the
 [Deployment Guide](../deployment) for instructions on how to get hold of
 these.
 
-In addition, this guide assumes that you have the following tools installed:
-
-- Java 8 (newer versions will not work)
-
 ## The Billionaires Problem
 
 We use a variation of Andrew Yao's [Millionaires' Problem](https://en.wikipedia.org/wiki/Yao%27s_Millionaires%27_problem)
@@ -36,16 +32,16 @@ in a private way by Jeff and Elon in a real-world setting.
 ```shell
 # Create a secret representing Jeff's net worth (note that we work with 
 # billion USD here)
-export JEFFS_NET_WORTH_ID=$(java -jar cs.jar amphora create-secret 177 -t billionaire=Jeff)
+export JEFFS_NET_WORTH_ID=$(cs amphora secrets create 177 --tag billionaire=Jeff)
 
 # And another one for Elon
-export ELONS_NET_WORTH_ID=$(java -jar cs.jar amphora create-secret 151 -t billionaire=Elon)
+export ELONS_NET_WORTH_ID=$(cs amphora secrets create 151 --tag billionaire=Elon)
 ```
 
 We can check the secrets have been created using:
 
 ```shell
-java -jar cs.jar amphora get-secrets
+cs amphora secrets list
 ```
 
 The output should resemble the following:
@@ -54,12 +50,12 @@ The output should resemble the following:
     The output you see will differ wrt. identifiers and the `creation-date` tag.
 
 ```shell
-ab160f93-3b7e-468f-b687-f9c46fb535f3
-    billionaire -> Jeff
-    creation-date -> 1630660117946
-ef3e867f-9233-46fb-9cde-7a09c99bc32f
-    billionaire -> Elon
-    creation-date -> 1630660125951
+ab160f93-3b7e-468f-b687-f9c46fb535f3:
+    Billionaire: Jeff
+    Creation-date: 1630660117946
+ef3e867f-9233-46fb-9cde-7a09c99bc32f:
+    Billionaire: Elon
+    Creation-date: 1630660125951
 ```
 
 ### Invoke the Billionaires Function
@@ -99,9 +95,9 @@ Elon invokes the program using the
 as follows:
 
 ```shell
-export RESULT_ID=$(cat billionaires.mpc | java -jar cs.jar ephemeral execute \
-  -i $JEFFS_NET_WORTH_ID \
-  -i $ELONS_NET_WORTH_ID \
+export RESULT_ID=$(cat billionaires.mpc | cs ephemeral execute \
+  --input $JEFFS_NET_WORTH_ID \
+  --input $ELONS_NET_WORTH_ID \
   ephemeral-generic.default \
   | tail -n +2 \
   | sed 's/[][]//g')
@@ -114,15 +110,15 @@ example and stores it in the `RESULT_ID` shell variable.
 Using this identifier Elon can inspect the result of the execution using:
 
 ```shell
-java -jar cs.jar amphora get-secret $RESULT_ID
+cs amphora secrets get $RESULT_ID
 ```
 
 The output being `0` tells Elon that unfortunately Jeff is still the alpha:
 
 ```shell
-[0]
-    creation-date -> 1630661192626
-    gameID -> 7899b23c-4509-4ff8-a9ae-d9b59fa77fea
+[0]:
+    Creation-date: 1630661192626
+    GameID: 7899b23c-4509-4ff8-a9ae-d9b59fa77fea
 ```
 
 After buying a bunch of the fabulous new (and completely fictional) _Carbyne
@@ -132,15 +128,15 @@ pole position. He deletes his old and submits his new net worth and triggers the
 evaluation of the Billionaires Problem logic again using:
 
 ```shell
-java -jar cs.jar amphora delete-secrets $ELONS_NET_WORTH_ID
-export ELONS_NET_WORTH_ID=$(java -jar cs.jar amphora create-secret 179 -t billionaire=Elon)
-export RESULT_ID=$(cat billionaires.mpc | java -jar cs.jar ephemeral execute \
-  -i $JEFFS_NET_WORTH_ID \
-  -i $ELONS_NET_WORTH_ID \
+cs amphora secrets delete $ELONS_NET_WORTH_ID
+export ELONS_NET_WORTH_ID=$(cs amphora secrets create 179 --tag billionaire=Elon)
+export RESULT_ID=$(cat billionaires.mpc | cs ephemeral execute \
+  --input $JEFFS_NET_WORTH_ID \
+  --input $ELONS_NET_WORTH_ID \
   ephemeral-generic.default \
   | tail -n +2 \
   | sed 's/[][]//g')
-java -jar cs.jar amphora get-secret $RESULT_ID
+cs amphora secrets get $RESULT_ID
 ```
 
 This time the execution results in a '1', which creates a pleasantly warm

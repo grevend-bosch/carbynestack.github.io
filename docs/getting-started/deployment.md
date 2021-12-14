@@ -117,20 +117,21 @@ clusters using the kind tool as described in the
       "prime" : 198766463529478683931867765928436695041,
       "r" : 141515903391459779531506841503331516415,
       "noSslValidation" : true,
-      "trustedCertificates" : [ ],
-      "providers" : [ {
-        "amphoraServiceUrl" : "http://$APOLLO_FQDN/amphora",
-        "castorServiceUrl" : "http://$APOLLO_FQDN/castor",
-        "ephemeralServiceUrl" : "http://$APOLLO_FQDN/",
-        "id" : 1,
-        "baseUrl" : "http://$APOLLO_FQDN/"
-      }, {
-        "amphoraServiceUrl" : "http://$STARBUCK_FQDN/amphora",
-        "castorServiceUrl" : "http://$STARBUCK_FQDN/castor",
-        "ephemeralServiceUrl" : "http://$STARBUCK_FQDN/",
-        "id" : 2,
-        "baseUrl" : "http://$STARBUCK_FQDN/"
-      } ],
+      "trustedCertificates" : [],
+      "vcp": {
+        "apollo": {
+          "amphoraServiceUrl": "http://$APOLLO_FQDN/amphora",
+          "castorServiceUrl": "http://$APOLLO_FQDN/castor",
+          "ephemeralServiceUrl": "http://$APOLLO_FQDN/",
+          "baseUrl": "http://$APOLLO_FQDN/"
+        },
+        "starbuck": {
+          "amphoraServiceUrl": "http://$STARBUCK_FQDN/amphora",
+          "castorServiceUrl": "http://$STARBUCK_FQDN/castor",
+          "ephemeralServiceUrl": "http://$STARBUCK_FQDN/",
+          "baseUrl": "http://$STARBUCK_FQDN/"
+        }
+      },
       "rinv" : 133854242216446749056083838363708373830
     }
     EOF
@@ -141,18 +142,17 @@ clusters using the kind tool as described in the
     using:
 
     ```shell
-    java -jar cs.jar configure
+    cs configure
     ```
 
     You can verify that the configuration works by fetching telemetry data from
     castor using:
 
     !!! attention
-        Replace `<#>` with either `1` for the `apollo` cluster or `2` for the
-        `starbuck` cluster.
+        Replace `<#>` with either `apollo` or `starbuck`.
 
     ```shell
-    java -jar cs.jar castor get-telemetry <#>
+    cs castor telemetry <#>
     ```
 
 ### Upload Offline Material
@@ -190,18 +190,18 @@ time-consuming process, we provide pre-generated material.
 
     function uploadTuples {
        echo ${NUMBER_OF_CHUNKS}
-       for type in INPUT_MASK_GFP MULTIPLICATION_TRIPLE_GFP; do
+       for type in input_mask_gfp multiplication_triple_gfp; do
           for (( i=0; i<${NUMBER_OF_CHUNKS}; i++ )); do
              local chunkId=$(uuidgen)
              echo "Uploading ${type} to http://${APOLLO_FQDN}/castor (Apollo)"
-             java -jar ${CLI_PATH}/cs.jar castor upload-tuple -f ${TUPLE_FOLDER}/Triples-p-P0 -t ${type} -i ${chunkId} 1
+             ${CLI_PATH}/cs castor upload --tuples ${TUPLE_FOLDER}/Triples-p-P0 --type ${type} --chunk ${chunkId} --provider apollo
              local statusMaster=$?
              echo "Uploading ${type} to http://${STARBUCK_FQDN}/castor (Starbuck)"
-             java -jar ${CLI_PATH}/cs.jar castor upload-tuple -f ${TUPLE_FOLDER}/Triples-p-P1 -t ${type} -i ${chunkId} 2
+             ${CLI_PATH}/cs castor upload --tuples ${TUPLE_FOLDER}/Triples-p-P1 -t ${type} --chunk ${chunkId} --provider starbuck
              local statusSlave=$?
              if [[ "${statusMaster}" -eq 0 && "${statusSlave}" -eq 0 ]]; then
-                java -jar ${CLI_PATH}/cs.jar castor activate-chunk -i ${chunkId} 1
-                java -jar ${CLI_PATH}/cs.jar castor activate-chunk -i ${chunkId} 2
+                ${CLI_PATH}/cs castor activate --chunk ${chunkId} --provider apollo
+                ${CLI_PATH}/cs castor activate --chunk ${chunkId} --provider starbuck
              else
                 echo "ERROR: Failed to upload one tuple chunk - not activated"
              fi
@@ -219,11 +219,10 @@ time-consuming process, we provide pre-generated material.
    Carbyne Stack services using:
 
     !!! attention
-        Replace `<#>` with either `1` for the `apollo` cluster or `2` for the
-        `starbuck` cluster.
+        Replace `<#>` with either `apollo` or `starbuck`.
 
     ```shell
-    java -jar cs.jar castor get-telemetry <#>
+    cs castor telemetry <#>
     ```
 
 You now have a fully functional Carbyne Stack Virtual Cloud at your hands.
